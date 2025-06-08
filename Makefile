@@ -1,26 +1,28 @@
-# 크로스플랫폼 테트리스 Makefile
-# Windows (MinGW/MSYS2/Cygwin)와 Unix/Linux/macOS 모두 지원
+# Cross-Platform Tetris Makefile
+# Windows (MinGW/MSYS2/Cygwin) and Unix/Linux/macOS support
 
-# 컴파일러 설정
+# Compiler settings
 CC = gcc
 
-# 기본 컴파일 플래그
-CFLAGS = -Wall -Wextra -std=c99 -O2
+# Basic compile flags
+CFLAGS = -Wall -Wextra -std=c99 -O2 -Wno-sign-compare
 
-# 소스 파일
+# Source file
 SRCFILE = tetris.c
 
-# 플랫폼 감지
+# Platform detection
 ifeq ($(OS),Windows_NT)
-    # Windows 환경
-    TARGET = tetris.c
+    # Windows environment
+    EXECUTABLE = tetris.exe
     PLATFORM = Windows
-    # Windows용 추가 플래그 (필요시)
+    # Windows additional flags (if needed)
     LDFLAGS = 
     RM = del /Q
     CLEAN_TARGET = tetris.exe tetris_result.dat
+    # Windows console encoding settings for Korean
+    ECHO = @echo
 else
-    # Unix/Linux/macOS 환경
+    # Unix/Linux/macOS environment
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
         PLATFORM = Linux
@@ -32,117 +34,115 @@ else
         PLATFORM = Unix
     endif
     
-    TARGET = tetris
+    EXECUTABLE = tetris
     LDFLAGS = 
     RM = rm -f
     CLEAN_TARGET = tetris tetris_result.dat
+    ECHO = @echo
 endif
 
-# 기본 타겟
-.PHONY: all clean run help install debug release
+# Default target
+.PHONY: all clean run help install debug release info test check
 
-all: $(TARGET)
-	@echo "==================================="
-	@echo "빌드 완료!"
-	@echo "플랫폼: $(PLATFORM)"
-	@echo "실행파일: $(TARGET)"
-	@echo "==================================="
+all: $(EXECUTABLE)
+	$(ECHO) "==================================="
+	$(ECHO) "Build Complete!"
+	$(ECHO) "Platform: $(PLATFORM)"
+	$(ECHO) "Executable: $(EXECUTABLE)"
+	$(ECHO) "==================================="
 
-# 메인 빌드 룰
-$(TARGET): $(SRCFILE)
-	@echo "==================================="
-	@echo "$(PLATFORM)용 테트리스 컴파일 중..."
-	@echo "==================================="
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCFILE) $(LDFLAGS)
+# Main build rule
+$(EXECUTABLE): $(SRCFILE)
+	$(ECHO) "==================================="
+	$(ECHO) "Compiling Tetris for $(PLATFORM)..."
+	$(ECHO) "==================================="
+	$(CC) $(CFLAGS) -o $(EXECUTABLE) $(SRCFILE) $(LDFLAGS)
 
-# 디버그 빌드
+# Debug build
 debug: CFLAGS += -DDEBUG -g
-debug: $(TARGET)
-	@echo "디버그 빌드 완료"
+debug: $(EXECUTABLE)
+	$(ECHO) "Debug build complete"
 
-# 릴리즈 빌드 (최적화 강화)
+# Release build (enhanced optimization)
 release: CFLAGS += -DNDEBUG -O3
-release: $(TARGET)
-	@echo "릴리즈 빌드 완료"
+release: $(EXECUTABLE)
+	$(ECHO) "Release build complete"
 
-# 실행
-run: $(TARGET)
-	@echo "==================================="
-	@echo "테트리스 게임 실행 중..."
-	@echo "==================================="
+# Run
+run: $(EXECUTABLE)
+	$(ECHO) "==================================="
+	$(ECHO) "Running Tetris Game..."
+	$(ECHO) "==================================="
 ifeq ($(OS),Windows_NT)
-	./$(TARGET)
+	.\$(EXECUTABLE)
 else
-	./$(TARGET)
+	./$(EXECUTABLE)
 endif
 
-# 정리
+# Clean
 clean:
-	@echo "==================================="
-	@echo "빌드 파일 정리 중..."
-	@echo "==================================="
-	$(RM) $(CLEAN_TARGET)
-	@echo "정리 완료"
+	$(ECHO) "==================================="
+	$(ECHO) "Cleaning build files..."
+	$(ECHO) "==================================="
+	$(RM) $(CLEAN_TARGET) 2>nul || echo.
+	$(ECHO) "Clean complete"
 
-# 도움말
+# Help
 help:
-	@echo "==================================="
-	@echo "크로스플랫폼 테트리스 Makefile"
-	@echo "==================================="
-	@echo "사용 가능한 명령어:"
-	@echo ""
-	@echo "  make 또는 make all    - 일반 빌드"
-	@echo "  make debug           - 디버그 빌드 (-g 플래그 포함)"
-	@echo "  make release         - 릴리즈 빌드 (최적화 강화)"
-	@echo "  make run             - 빌드 후 실행"
-	@echo "  make clean           - 빌드 파일 삭제"
-	@echo "  make install         - 시스템에 설치"
-	@echo "  make help            - 이 도움말 표시"
-	@echo ""
-	@echo "현재 플랫폼: $(PLATFORM)"
-	@echo "타겟 파일: $(TARGET)"
-	@echo "==================================="
+	$(ECHO) "==================================="
+	$(ECHO) "Cross-Platform Tetris Makefile"
+	$(ECHO) "==================================="
+	$(ECHO) "Available commands:"
+	$(ECHO) ""
+	$(ECHO) "  make or make all     - Normal build"
+	$(ECHO) "  make debug          - Debug build (with -g flag)"
+	$(ECHO) "  make release        - Release build (optimized)"
+	$(ECHO) "  make run            - Build and run"
+	$(ECHO) "  make clean          - Clean build files"
+	$(ECHO) "  make install        - Install to system"
+	$(ECHO) "  make help           - Show this help"
+	$(ECHO) ""
+	$(ECHO) "Current platform: $(PLATFORM)"
+	$(ECHO) "Target file: $(EXECUTABLE)"
+	$(ECHO) "==================================="
 
-# 설치 (선택적)
-install: $(TARGET)
+# Install (optional)
+install: $(EXECUTABLE)
 ifeq ($(OS),Windows_NT)
-	@echo "Windows에서는 수동으로 PATH에 추가하세요"
-	@echo "또는 원하는 위치로 $(TARGET) 파일을 복사하세요"
+	$(ECHO) "For Windows, manually add to PATH"
+	$(ECHO) "or copy $(EXECUTABLE) to desired location"
 else
-	@echo "시스템에 설치 중..."
-	sudo cp $(TARGET) /usr/local/bin/
-	@echo "설치 완료! 어디서든 'tetris' 명령으로 실행 가능합니다"
+	$(ECHO) "Installing to system..."
+	sudo cp $(EXECUTABLE) /usr/local/bin/
+	$(ECHO) "Install complete! Run 'tetris' from anywhere"
 endif
 
-# 컴파일러 및 플래그 정보 표시
+# Show compiler and flag information
 info:
-	@echo "==================================="
-	@echo "빌드 환경 정보"
-	@echo "==================================="
-	@echo "컴파일러: $(CC)"
-	@echo "컴파일 플래그: $(CFLAGS)"
-	@echo "링크 플래그: $(LDFLAGS)"
-	@echo "소스 파일: $(SRCFILE)"
-	@echo "타겟 파일: $(TARGET)"
-	@echo "플랫폼: $(PLATFORM)"
-	@echo "==================================="
+	$(ECHO) "==================================="
+	$(ECHO) "Build Environment Info"
+	$(ECHO) "==================================="
+	$(ECHO) "Compiler: $(CC)"
+	$(ECHO) "Compile flags: $(CFLAGS)"
+	$(ECHO) "Link flags: $(LDFLAGS)"
+	$(ECHO) "Source file: $(SRCFILE)"
+	$(ECHO) "Target file: $(EXECUTABLE)"
+	$(ECHO) "Platform: $(PLATFORM)"
+	$(ECHO) "==================================="
 
-# 빠른 테스트 빌드 및 실행
+# Quick test build and run
 test: clean all run
 
-# 의존성 체크 (고급 사용자용)
+# Dependency check (for advanced users)
 check:
-	@echo "==================================="
-	@echo "시스템 의존성 확인 중..."
-	@echo "==================================="
-	@echo -n "GCC 버전: "
-	@$(CC) --version | head -n1 || echo "GCC가 설치되지 않았습니다"
-	@echo -n "Make 버전: "
-	@make --version | head -n1 || echo "Make가 설치되지 않았습니다"
+	$(ECHO) "==================================="
+	$(ECHO) "Checking system dependencies..."
+	$(ECHO) "==================================="
+	@$(CC) --version | head -n1 || echo "GCC not installed"
+	@make --version | head -n1 || echo "Make not installed"
 ifeq ($(OS),Windows_NT)
-	@echo "Windows 환경 감지됨"
+	$(ECHO) "Windows environment detected"
 else
-	@echo -n "시스템: "
 	@uname -a
 endif
-	@echo "==================================="
+	$(ECHO) "==================================="

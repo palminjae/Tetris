@@ -9,6 +9,7 @@
     #include <windows.h>
     #include <conio.h>
     #define SLEEP_MS(ms) Sleep(ms)
+    
     /* Windows 전용 깜빡임 없는 화면 클리어 */
     void clear_screen_windows(void) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -60,6 +61,29 @@
         SetConsoleCursorPosition(hConsole, coord);
     }
     
+    /* 개선된 깜빡임 없는 화면 갱신 */
+    void update_game_screen(void) {
+        // 커서만 홈으로 이동 (화면을 지우지 않음)
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        COORD homeCoords = {0, 0};
+        SetConsoleCursorPosition(hOut, homeCoords);
+    }
+    
+    /* 화면 버퍼링을 위한 함수 */
+    void setup_console_buffer(void) {
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        DWORD dwMode = 0;
+        GetConsoleMode(hOut, &dwMode);
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        SetConsoleMode(hOut, dwMode);
+        
+        // 버퍼 크기 설정
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(hOut, &csbi);
+        COORD bufferSize = {80, 50};  // 적당한 크기로 설정
+        SetConsoleScreenBufferSize(hOut, bufferSize);
+    }
+    
 #else
     #include <sys/time.h>
     #include <termios.h>
@@ -73,6 +97,8 @@
     void hide_cursor(void) { printf("\033[?25l"); }
     void show_cursor(void) { printf("\033[?25h"); }
     void goto_xy(int x, int y) { printf("\033[%d;%dH", y+1, x+1); }
+    void update_game_screen(void) { printf("\033[H"); fflush(stdout); }
+    void setup_console_buffer(void) { /* Unix에서는 필요 없음 */ }
 #endif
 
 /* 타이머  */
@@ -336,6 +362,55 @@ void flush_input_buffer(void) {
     }
 }
 
+/* 개선된 이름 입력 함수 - Windows */
+void get_player_name(char* name, int max_len) {
+    printf("\n\t\t\tEnter your name: ");
+    fflush(stdout);
+    
+    int i = 0;
+    int ch;
+    
+    while (i < max_len - 1) {
+        ch = _getch();
+        
+        if (ch == 13) {  // Enter키
+            break;
+        }
+        else if (ch == 8 && i > 0) {  // Backspace
+            printf("\b \b");
+            fflush(stdout);
+            i--;
+        }
+        else if (ch >= 32 && ch <= 126) {  // 출력 가능한 ASCII 문자
+            printf("%c", ch);
+            fflush(stdout);
+            name[i++] = ch;
+        }
+        else if (ch == 224) {  // 확장키 코드 (방향키 등)
+            _getch();  // 두 번째 바이트 무시
+        }
+        else if (ch < 0) {  // 한글 등 멀티바이트 문자
+            // 한글의 경우 2바이트씩 처리
+            if (i < max_len - 2) {
+                int ch2 = _getch();
+                printf("%c%c", (unsigned char)ch, (unsigned char)ch2);
+                fflush(stdout);
+                name[i++] = ch;
+                name[i++] = ch2;
+            }
+        }
+    }
+    
+    name[i] = '\0';
+    printf("\n");
+    
+    // 빈 이름 처리
+    if (strlen(name) == 0) {
+        strcpy(name, "Anonymous");
+        printf("\t\t\tName set to 'Anonymous'\n");
+    }
+}
+
 #else
 /* Unix/Linux/macOS용 getch 구현 */
 static struct termios old_tty, new_tty;
@@ -364,6 +439,32 @@ int getch_nb(void) {
 
 void flush_input_buffer(void) {
     tcflush(STDIN_FILENO, TCIFLUSH);
+}
+
+/* 개선된 이름 입력 함수 - Unix/Linux/macOS */
+void get_player_name(char* name, int max_len) {
+    printf("\n\t\t\tEnter your name: ");
+    fflush(stdout);
+    
+    // 키보드를 일시적으로 일반 모드로 변경
+    struct termios temp_tty;
+    tcgetattr(STDIN_FILENO, &temp_tty);
+    temp_tty.c_lflag |= (ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &temp_tty);
+    
+    if (fgets(name, max_len, stdin) != NULL) {
+        // 개행 문자 제거
+        name[strcspn(name, "\n")] = 0;
+    }
+    
+    // 키보드 모드 복원
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tty);
+    
+    // 빈 이름 처리
+    if (strlen(name) == 0) {
+        strcpy(name, "Anonymous");
+        printf("\t\t\tName set to 'Anonymous'\n");
+    }
 }
 #endif
 
@@ -445,23 +546,19 @@ int display_tetris_table(void)
         case O_BLOCK: block_pointer = o_block; break;
     }
     
-    /* 커서를 (0,0)으로 이동하여 깜빡임 없이 화면 갱신 */
-    goto_xy(0, 0);
+    /* 깜빡임 없는 화면 갱신 - 커서만 홈으로 이동 */
+    update_game_screen();
 
-    printf("\n\n\t\t\t<< TETRIS >>\n");
-    printf("\n\t\t\tNext Block\n");
+    printf("<< TETRIS >>\n\n");
+    printf("Next Block\n");
     
     for(i = 0; i < 4; i++)
     {
-        printf("\t\t\t");
+        printf("    ");
         for(j = 0; j < 4; j++)
         {
             if(block_pointer[0][i][j] == 1)
-#ifdef _WIN32
-                printf("██");  /* Windows에서도 유니코드 블록 문자 사용 */
-#else
-                printf("██");  /* Unix/Linux/macOS에서는 유니코드 블록 문자 사용 */
-#endif
+                printf("[]");
             else
                 printf("  ");
         }
@@ -470,27 +567,15 @@ int display_tetris_table(void)
     
     printf("\n");
     for(i = 0; i < 21; i++){
-        printf("\t\t\t");
+        printf("    ");
         for(j = 0; j < 10; j++){
             if(j == 0 || j == 9 || i == 20)
-#ifdef _WIN32
-                printf("██");
-#else
-                printf("██");
-#endif
+                printf("||");
             else{
                 if(tetris_table[i][j] == 1)
-#ifdef _WIN32
-                    printf("██");
-#else
-                    printf("██");
-#endif
+                    printf("[]");
                 else if(tetris_table[i][j] == 2)
-#ifdef _WIN32
-                    printf("▓▓");
-#else
-                    printf("▓▓");
-#endif
+                    printf("##");
                 else
                     printf("  ");
             }
@@ -498,10 +583,14 @@ int display_tetris_table(void)
         printf("\n");
     }
     
-    printf("\t\t\tCurrent Score: %ld\n", point);
-    printf("\t\t\tBest Score: %d\n", best_point);
-    printf("\n\t\t\tControls: J(left) L(right) K(down) I(rotate) A(drop) P(quit)\n");
-    printf("                                                                     "); /* 화면 끝부분 클리어 */
+    printf("\nCurrent Score: %ld\n", point);
+    printf("Best Score: %d\n", best_point);
+    printf("\nControls: J(left) L(right) K(down) I(rotate) A(drop) P(quit)\n");
+    
+    // 화면 끝에 충분한 공백 추가하여 이전 텍스트 덮어쓰기
+    for(i = 0; i < 5; i++) {
+        printf("                                                                                \n");
+    }
     
     return 0;
 }
@@ -511,7 +600,6 @@ int game_start(void)
     int key;
     long frame_count = 0;
     int drop_interval = 30;
-    int first_draw = 1;
     
     init_tetris_table();
     
@@ -528,6 +616,9 @@ int game_start(void)
     
     init_keyboard();
 
+    /* 콘솔 버퍼 설정 및 최적화 */
+    setup_console_buffer();
+    
     /* 첫 화면은 전체 클리어 */
     CLEAR_SCREEN();
     hide_cursor(); /* 커서 숨기기 */
@@ -566,7 +657,7 @@ int game_start(void)
         refresh(block_number);
         display_tetris_table();
 
-        SLEEP_MS(50);
+        SLEEP_MS(33);  // 프레임 레이트를 30fps로 개선 (33ms)
     }
     
     show_cursor(); /* 커서 다시 보이기 */
@@ -602,11 +693,8 @@ int game_start(void)
     temp_result.hour = tm->tm_hour;
     temp_result.min = tm->tm_min;
     
-    printf("\n\t\t\tEnter your name: ");
-    flush_input_buffer();
-    fgets(temp_result.name, sizeof(temp_result.name), stdin);
-    /* 개행 문자 제거 */
-    temp_result.name[strcspn(temp_result.name, "\n")] = 0;
+    /* 개선된 이름 입력 함수 사용 */
+    get_player_name(temp_result.name, sizeof(temp_result.name));
     
     FILE *fp = fopen("tetris_result.dat", "ab");
     if(fp != NULL)
@@ -966,11 +1054,61 @@ int search_result(void){
     int i;
     int found = 0;
     
-    flush_input_buffer();
+    CLEAR_SCREEN();
+    printf("\n\t\t\tSearch Player Records\n");
+    printf("\t\t\t====================\n");
+    
+    /* 개선된 이름 입력 사용 */
+#ifdef _WIN32
+    /* Windows용 검색 이름 입력 */
     printf("\n\t\t\tEnter name to search: ");
-    fgets(search_name, sizeof(search_name), stdin);
-    /* 개행 문자 제거 */
-    search_name[strcspn(search_name, "\n")] = 0;
+    fflush(stdout);
+    
+    int i_input = 0;
+    int ch;
+    int max_input = (int)(sizeof(search_name) - 1);  // 타입 캐스팅으로 경고 해결
+    
+    while (i_input < max_input) {
+        ch = _getch();
+        
+        if (ch == 13) {  // Enter키
+            break;
+        }
+        else if (ch == 8 && i_input > 0) {  // Backspace
+            printf("\b \b");
+            fflush(stdout);
+            i_input--;
+        }
+        else if (ch >= 32 && ch <= 126) {  // 출력 가능한 ASCII 문자
+            printf("%c", ch);
+            fflush(stdout);
+            search_name[i_input++] = ch;
+        }
+        else if (ch == 224) {  // 확장키 코드
+            _getch();  // 두 번째 바이트 무시
+        }
+    }
+    search_name[i_input] = '\0';
+    printf("\n");
+#else
+    /* Unix/Linux/macOS용 검색 이름 입력 */
+    // 키보드를 일시적으로 일반 모드로 변경
+    struct termios temp_tty;
+    tcgetattr(STDIN_FILENO, &temp_tty);
+    temp_tty.c_lflag |= (ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &temp_tty);
+    
+    printf("\n\t\t\tEnter name to search: ");
+    fflush(stdout);
+    
+    if (fgets(search_name, sizeof(search_name), stdin) != NULL) {
+        // 개행 문자 제거
+        search_name[strcspn(search_name, "\n")] = 0;
+    }
+    
+    // 키보드 모드 복원
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tty);
+#endif
     
     fp = fopen("tetris_result.dat", "rb");
     if(fp == NULL){
@@ -1018,7 +1156,6 @@ int search_result(void){
     fread(result_pointer, sizeof(struct result), count, fp);
     fclose(fp);
     
-    CLEAR_SCREEN();
     printf("\n\t\t\tSearch Results for: %s\n", search_name);
     printf("\t\t\t================================\n");
     
@@ -1058,16 +1195,31 @@ int search_result(void){
 int main(void)
 {
     int menu = 1;
-    printf("Starting Cross-Platform Tetris...\n");
-    printf("Platform: ");
+    
+    // 초기 설정
 #ifdef _WIN32
-    printf("Windows\n");
+    // Windows 콘솔 UTF-8 설정
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    
+    printf("Starting Cross-Platform Tetris...\n");
+    printf("Platform: Windows\n");
+    
+    // Windows 콘솔 설정
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
 #elif defined(__APPLE__)
-    printf("macOS\n");
+    printf("Starting Cross-Platform Tetris...\n");
+    printf("Platform: macOS\n");
 #elif defined(__linux__)
-    printf("Linux\n");
+    printf("Starting Cross-Platform Tetris...\n");
+    printf("Platform: Linux\n");
 #else
-    printf("Unix\n");
+    printf("Starting Cross-Platform Tetris...\n");
+    printf("Platform: Unix\n");
 #endif
     
     SLEEP_MS(1000);  /* 플랫폼 정보를 잠깐 보여줌 */
