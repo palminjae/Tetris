@@ -558,7 +558,7 @@ int display_tetris_table(void)
         for(j = 0; j < 4; j++)
         {
             if(block_pointer[0][i][j] == 1)
-                printf("[]");
+                printf("🟥");
             else
                 printf("  ");
         }
@@ -570,12 +570,12 @@ int display_tetris_table(void)
         printf("    ");
         for(j = 0; j < 10; j++){
             if(j == 0 || j == 9 || i == 20)
-                printf("||");
+                printf("⬜️");
             else{
                 if(tetris_table[i][j] == 1)
-                    printf("[]");
+                    printf("🟩");
                 else if(tetris_table[i][j] == 2)
-                    printf("##");
+                    printf("🟥");
                 else
                     printf("  ");
             }
