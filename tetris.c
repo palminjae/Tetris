@@ -8,6 +8,12 @@
 #ifdef _WIN32
     #include <windows.h>
     #include <conio.h>
+    
+    // MinGW에서 누락된 상수들을 직접 정의
+    #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+    #endif
+    
     #define SLEEP_MS(ms) Sleep(ms)
     
     /* Windows 전용 깜빡임 없는 화면 클리어 */
@@ -601,7 +607,11 @@ int display_tetris_table(void)
         for(j = 0; j < 4; j++)
         {
             if(block_pointer[0][i][j] == 1)
-                printf("🟥");
+#ifdef _WIN32
+                printf("[]");  // Windows는 ASCII
+#else
+                printf("🟥");  // 맥은 이모지
+#endif
             else
                 printf("  ");
         }
@@ -613,12 +623,24 @@ int display_tetris_table(void)
         printf("    ");
         for(j = 0; j < 10; j++){
             if(j == 0 || j == 9 || i == 20)
-                printf("⬜️");
+#ifdef _WIN32
+                printf("||");  // Windows는 ASCII
+#else
+                printf("⬜️");  // 맥은 이모지
+#endif
             else{
                 if(tetris_table[i][j] == 1)
-                    printf("🟩");
+#ifdef _WIN32
+                    printf("[]");  // Windows는 ASCII
+#else
+                    printf("🟩");  // 맥은 이모지
+#endif
                 else if(tetris_table[i][j] == 2)
-                    printf("🟥");
+#ifdef _WIN32
+                    printf("##");  // Windows는 ASCII
+#else
+                    printf("🟥");  // 맥은 이모지
+#endif
                 else
                     printf("  ");
             }
