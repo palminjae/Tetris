@@ -84,9 +84,8 @@ clean:
 	$(ECHO) "==================================="
 	$(ECHO) "Cleaning build files..."
 	$(ECHO) "==================================="
-	$(RM) $(CLEAN_TARGET) 2>nul || echo.
+	-$(RM) $(CLEAN_TARGET)
 	$(ECHO) "Clean complete"
-
 # Help
 help:
 	$(ECHO) "==================================="
