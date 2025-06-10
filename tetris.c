@@ -9,13 +9,7 @@
     #include <windows.h>
     #include <conio.h>
     
-    // MinGW에서 누락된 상수들을 직접 정의
-    #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
-    #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
-    #endif
-    
-    
-    // MinGW에서 누락된 상수들을 직접 정의
+    // MinGW에서 누락되었다고 해서 상수 직접 정의함
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
     #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
