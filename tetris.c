@@ -16,8 +16,8 @@
     
     #define SLEEP_MS(ms) Sleep(ms)
     
-    /* Windows 전용 깜빡임 없는 화면 클리어 */
-    void clear_screen_windows(void) {
+    // 윈도우에서 유독 깜빡임이 심해서 고쳐보기기
+    void clear_Windows_screen(void) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_SCREEN_BUFFER_INFO csbi;
         DWORD count;
@@ -41,7 +41,7 @@
     }
     #define CLEAR_SCREEN() clear_screen_windows()
     
-    /* 커서 숨기기/보이기 함수 */
+    // 커서 숨기기기
     void hide_cursor(void) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_CURSOR_INFO cursorInfo;
@@ -49,7 +49,7 @@
         cursorInfo.bVisible = FALSE;
         SetConsoleCursorInfo(hConsole, &cursorInfo);
     }
-    
+    // 커서 보이게 하기기
     void show_cursor(void) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_CURSOR_INFO cursorInfo;
@@ -58,7 +58,7 @@
         SetConsoleCursorInfo(hConsole, &cursorInfo);
     }
     
-    /* 특정 위치로 커서 이동 */
+    // 커서 특정 위치로 옮기기기
     void goto_xy(int x, int y) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         COORD coord;
@@ -67,7 +67,7 @@
         SetConsoleCursorPosition(hConsole, coord);
     }
     
-    /* 개선된 깜빡임 없는 화면 갱신 */
+    // 계속 깜빡여서 추가 개선선
     void update_game_screen(void) {
         // 커서만 홈으로 이동 (화면을 지우지 않음)
         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -75,7 +75,7 @@
         SetConsoleCursorPosition(hOut, homeCoords);
     }
     
-    /* 화면 버퍼링을 위한 함수 */
+    // 화면 버퍼링을 위한 함수 
     void setup_console_buffer(void) {
         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
         DWORD dwMode = 0;
@@ -104,7 +104,7 @@
     void show_cursor(void) { printf("\033[?25h"); fflush(stdout); }
     void goto_xy(int x, int y) { printf("\033[%d;%dH", y+1, x+1); fflush(stdout); }
     
-    /* macOS/Linux에서 화면 완전 클리어 */
+    // macOS/Linux에서 화면 완전 클리어
     void update_game_screen(void) { 
 #ifdef __APPLE__
         printf("\033[2J\033[H");  // macOS에서는 화면 완전 클리어
@@ -300,7 +300,7 @@ char j_block[4][4][4] =
         {0, 0, 0, 0}
     },
     {
-        {0, 0, 0, 0},   
+        {0, 0, 0, 0},   // 회전 이상하게 되서 고침침
         {1, 1, 1, 0},   
         {0, 0, 1, 0},   
         {0, 0, 0, 0}
@@ -356,26 +356,22 @@ int x = 3, y = 0;
 int game = GAME_END;
 int best_point = 0;
 long point = 0;
-
-/* 고스트 블록 (예상 착지 위치) 관련 변수 */
-int ghost_y = 0;
+int ghost_y = 0; // 추가 {ghost 블럭(블럭이 떨어질 곳을 보여주는 블럭럭)}
 
 /* 플랫폼별 키보드 입력 처리 */
 #ifdef _WIN32
 /* Windows용 getch 구현 */
-int getch_nb(void) {
-    if (_kbhit()) {
-        return _getch();
+int getch_nonb(void) {
+    if (_kbhit()) { // 키가 눌렸는지 확인
+        return _getch();// 키가 있으면 읽어서 반환
     }
-    return EOF;
+    return EOF;// 키가 없으면 EOF 반환
 }
 
-void init_keyboard(void) {
-    /* Windows에서는 특별한 초기화 불필요 */
+void init_keyboard(void) {// 윈도우는 따로 초기화 필요없음음
 }
 
-void reset_keyboard(void) {
-    /* Windows에서는 특별한 복구 불필요 */
+void reset_keyboard(void) {// 윈도우 특별히 복구 필요X
 }
 
 void flush_input_buffer(void) {
@@ -384,8 +380,8 @@ void flush_input_buffer(void) {
     }
 }
 
-/* 개선된 이름 입력 함수 - Windows */
-void get_player_name(char* name, int max_len) {
+
+void player_name(char* name, int max_len) {// 이름 받기기
     printf("\n\t\t\tEnter your name: ");
     fflush(stdout);
     
@@ -403,7 +399,7 @@ void get_player_name(char* name, int max_len) {
         if (ch == 13) {  // Enter키
             break;
         }
-        else if (ch == 8 && i > 0) {  // Backspace
+        else if (ch == 8 && i > 0) {  // Backspace키키
             printf("\b \b");
             fflush(stdout);
             i--;
@@ -421,7 +417,7 @@ void get_player_name(char* name, int max_len) {
     name[i] = '\0';
     printf("\n");
     
-    // 빈 이름 처리 - 재입력 기회 제공
+    //이름이 비었을때 다시시
     if (strlen(name) == 0) {
         printf("\t\t\tName cannot be empty! Please enter again: ");
         fflush(stdout);
@@ -457,23 +453,23 @@ void get_player_name(char* name, int max_len) {
 }
 
 #else
-/* Unix/Linux/macOS용 getch 구현 */
+// Unix/Linux/macOS용 getch 구현
 static struct termios old_tty, new_tty;
 
 void init_keyboard(void) {
-    tcgetattr(STDIN_FILENO, &old_tty);
+    tcgetattr(STDIN_FILENO, &old_tty); //현재 설정 백업
     new_tty = old_tty;
-    new_tty.c_lflag &= ~(ICANON | ECHO);
-    new_tty.c_cc[VMIN] = 0;
-    new_tty.c_cc[VTIME] = 0;
+    new_tty.c_lflag &= ~(ICANON | ECHO); //라인 베퍼링, 에코 끄기
+    new_tty.c_cc[VMIN] = 0; // 최소 입력 문자 수 0
+    new_tty.c_cc[VTIME] = 0; // 타임아웃 0 (즉시 반환)
     tcsetattr(STDIN_FILENO, TCSANOW, &new_tty);
 }
 
 void reset_keyboard(void) {
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_tty);
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tty); // 기본 설정 복원하는 함수
 }
 
-int getch_nb(void) {
+int getch_nonb(void) {
     char ch;
     ssize_t bytesRead = read(STDIN_FILENO, &ch, 1);
     if (bytesRead == 1) {
@@ -483,27 +479,21 @@ int getch_nb(void) {
 }
 
 void flush_input_buffer(void) {
-    tcflush(STDIN_FILENO, TCIFLUSH);
+    tcflush(STDIN_FILENO, TCIFLUSH); // 입력 버퍼 완전히 비우는 함수수
 }
 
-/* 개선된 이름 입력 함수 - Unix/Linux/macOS */
-void get_player_name(char* name, int max_len) {
+void player_name(char* name, int max_len) {
     printf("\n\t\t\tEnter your name: ");
-    fflush(stdout);
-    
-    // 키보드를 표준 모드로 완전히 복원
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_tty);
-    
-    // 입력 버퍼 비우기
+    fflush(stdout);// 키보드를 표준 모드로 완전히 복원
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tty); // 입력 버퍼 비우기
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
     
     if (fgets(name, max_len, stdin) != NULL) {
-        // 개행 문자 제거
-        name[strcspn(name, "\n")] = 0;
+        name[strcspn(name, "\n")] = 0;// 개행 문자 제거
     }
     
-    // 빈 이름 처리 - 재입력 기회 제공
+    // 윈도우랑 같이 이름 공백일때 다시시
     if (strlen(name) == 0) {
         printf("\t\t\tName cannot be empty! Please enter again: ");
         if (fgets(name, max_len, stdin) != NULL) {
@@ -514,16 +504,14 @@ void get_player_name(char* name, int max_len) {
             strcpy(name, "Anonymous");
             printf("\t\t\tUsing 'Anonymous' as default name.\n");
         }
-    }
-    
-    // 게임 모드로 다시 설정하지 않음 (게임이 끝났으므로)
+    }// 게임 모드로 다시 설정하지 않음 (게임이 끝났으므로)
 }
 #endif
 
 /* 함수 프로토타입 선언 */
-int display_menu(void);
-int init_tetris_table(void);
-int display_tetris_table(void);
+int print_menu(void);
+int refresh_tetris_sc(void);
+int print_tetris_sc(void);
 int game_start(void);
 int refresh(int);
 int move_block(int);
@@ -532,15 +520,13 @@ int collision_test(int);
 int check_one_line(void);
 int print_result(void);
 int search_result(void);
-void calculate_ghost_position(void);
+void cal_ghost(void);
 void refresh_with_ghost(int);
 
-/* 고스트 블록 위치 계산 */
-void calculate_ghost_position(void) {
+//고스트 블록 위치 계산 
+void cal_ghost(void) {
     int original_y = y;
-    
-    // 현재 블록이 바닥에 닿을 때까지 y좌표를 증가시킨다
-    ghost_y = y;
+    ghost_y = y;// 현재 블록이 바닥에 닿을 때까지 y좌표를 증가
     while (1) {
         int old_y = y;
         y = ghost_y + 1;
@@ -551,12 +537,10 @@ void calculate_ghost_position(void) {
         }
         ghost_y++;
     }
-    
-    // 원래 y좌표로 복원
-    y = original_y;
+    y = original_y;// 원래 y좌표로 복원
 }
 
-/* 고스트 블록을 포함한 화면 새로고침 */
+// 고스트 블록을 포함한 화면 새로고침 
 void refresh_with_ghost(int block) {
     int i, j;
     int block_array_x, block_array_y;
@@ -582,7 +566,7 @@ void refresh_with_ghost(int block) {
     }
     
     // 고스트 블록 위치 계산
-    calculate_ghost_position();
+    cal_ghost();
     
     // 고스트 블록 그리기 (값 3)
     for(i = 0; i < 4; i++) {
@@ -613,7 +597,7 @@ void refresh_with_ghost(int block) {
     }
 }
 
-int display_menu(void)
+int print_menu(void)
 {
     int menu = 0;
     while(1)
@@ -646,7 +630,7 @@ int display_menu(void)
     return 0;
 }
 
-int init_tetris_table(void)
+int refresh_tetris_sc(void)
 {
     int i, j;
     for(i = 0; i < 20; i++)
@@ -662,7 +646,7 @@ int init_tetris_table(void)
     return 0;
 }
 
-int display_tetris_table(void)
+int print_tetris_sc(void)
 {
     int i, j;
     char (*block_pointer)[4][4] = NULL;
@@ -678,7 +662,7 @@ int display_tetris_table(void)
         case O_BLOCK: block_pointer = o_block; break;
     }
     
-    /* 플랫폼별 화면 갱신 */
+    // 플랫폼별 화면 둘다 이모지로 하려다 window는 이모지가 2개로 입력되어 판이깨짐..
     update_game_screen();
 
     printf("<< TETRIS >>\n\n");
@@ -756,7 +740,7 @@ int game_start(void)
     long frame_count = 0;
     int drop_interval = 30;
     
-    init_tetris_table();
+    refresh_tetris_sc();
     
     srand(time(NULL));
     
@@ -770,25 +754,20 @@ int game_start(void)
     block_state = 0;
     
     init_keyboard();
-
-    /* 콘솔 버퍼 설정 및 최적화 */
-    setup_console_buffer();
-    
-    /* 첫 화면은 전체 클리어 */
-    CLEAR_SCREEN();
-    hide_cursor(); /* 커서 숨기기 */
+    setup_console_buffer();// 콘솔 버퍼 설정 및 최적화
+    CLEAR_SCREEN(); // 처음 화면 클리어어
+    hide_cursor(); // 커서 숨기기
     
     refresh_with_ghost(block_number);
-    display_tetris_table();
+    print_tetris_sc();
     
     while(game == GAME_START)
     {
-        key = getch_nb();
+        key = getch_nonb();
 
         if(key != EOF)
         {
-            /* 개선된 switch문으로 키 입력 처리 */
-            switch(key) {
+            switch(key) { // if else보다 switch가 좋지 않을까?? 키를 빨리 입력해야하는데데
                 case 'j':
                 case 'J':
                     move_block(LEFT);
@@ -814,8 +793,7 @@ int game_start(void)
                     game = GAME_END;
                     break;
                 default:
-                    // 알 수 없는 키는 무시
-                    break;
+                    break;// 알 수 없는 키는 무시 안하니까 터짐짐
             }
         }
 
@@ -825,9 +803,10 @@ int game_start(void)
         }
 
         refresh_with_ghost(block_number);
-        display_tetris_table();
+        print_tetris_sc();
 
         SLEEP_MS(33);  // 프레임 레이트를 30fps로 개선 (33ms)
+        // 100ms 간격으로 하니까 블록 이동이 좀 끊김
     }
     
     show_cursor(); /* 커서 다시 보이기 */
@@ -862,8 +841,7 @@ int game_start(void)
     temp_result.hour = tm->tm_hour;
     temp_result.min = tm->tm_min;
     
-    /* 개선된 이름 입력 함수 사용 */
-    get_player_name(temp_result.name, sizeof(temp_result.name));
+    player_name(temp_result.name, sizeof(temp_result.name));
     
     FILE *fp = fopen("tetris_result.dat", "ab");
     if(fp != NULL)
@@ -1127,7 +1105,7 @@ int print_result(void)
 #ifdef _WIN32
         _getch();
 #else
-        while(getch_nb() == EOF) {
+        while(getch_nonb() == EOF) {
             SLEEP_MS(10);
         }
 #endif
@@ -1148,7 +1126,7 @@ int print_result(void)
 #ifdef _WIN32
         _getch();
 #else
-        while(getch_nb() == EOF) {
+        while(getch_nonb() == EOF) {
             SLEEP_MS(10);
         }
 #endif
@@ -1205,7 +1183,7 @@ int print_result(void)
 #ifdef _WIN32
     _getch();
 #else
-    while(getch_nb() == EOF) {
+    while(getch_nonb() == EOF) {
         SLEEP_MS(10);
     }
 #endif
@@ -1287,7 +1265,7 @@ int search_result(void){
 #ifdef _WIN32
         _getch();
 #else
-        while(getch_nb() == EOF) {
+        while(getch_nonb() == EOF) {
             SLEEP_MS(10);
         }
 #endif
@@ -1307,7 +1285,7 @@ int search_result(void){
 #ifdef _WIN32
         _getch();
 #else
-        while(getch_nb() == EOF) {
+        while(getch_nonb() == EOF) {
             SLEEP_MS(10);
         }
 #endif
@@ -1351,7 +1329,7 @@ int search_result(void){
 #ifdef _WIN32
     _getch();
 #else
-    while(getch_nb() == EOF) {
+    while(getch_nonb() == EOF) {
         SLEEP_MS(10);
     }
 #endif
@@ -1394,7 +1372,7 @@ int main(void)
     SLEEP_MS(1000);  /* 플랫폼 정보를 잠깐 보여줌 */
     
     while(menu){
-        menu = display_menu();
+        menu = print_menu();
 
         switch(menu) {
             case 1:
