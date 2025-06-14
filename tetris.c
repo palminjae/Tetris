@@ -39,7 +39,7 @@
         /* 커서를 (0,0)으로 이동 */
         SetConsoleCursorPosition(hConsole, homeCoords);
     }
-    #define CLEAR_SCREEN() clear_screen_windows()
+    #define CLEAR_SCREEN() clear_Windows_screen()
     
     // 커서 숨기기기
     void hide_cursor(void) {
