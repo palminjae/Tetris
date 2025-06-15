@@ -4,7 +4,7 @@
 #include <string.h>
 #include <time.h>
 
-/* 플랫폼별 헤더 파일 포함 */
+// 플랫폼별 헤더 파일 포함
 #ifdef _WIN32
     #include <windows.h>
     #include <conio.h>
@@ -26,17 +26,17 @@
         
         if (hConsole == INVALID_HANDLE_VALUE) return;
         
-        /* 현재 화면 정보 가져오기 */
+        // 현재 화면 정보 가져오기
         if (!GetConsoleScreenBufferInfo(hConsole, &csbi)) return;
         cellCount = csbi.dwSize.X * csbi.dwSize.Y;
         
-        /* 화면을 공백으로 채우기 */
+        // 화면을 공백으로 채우기
         if (!FillConsoleOutputCharacter(hConsole, (TCHAR)' ', cellCount, homeCoords, &count)) return;
         
-        /* 속성 초기화 */
+        // 속성 초기화
         if (!FillConsoleOutputAttribute(hConsole, csbi.wAttributes, cellCount, homeCoords, &count)) return;
         
-        /* 커서를 (0,0)으로 이동 */
+        // 커서를 (0,0)으로 이동
         SetConsoleCursorPosition(hConsole, homeCoords);
     }
     #define CLEAR_SCREEN() clear_Windows_screen()
@@ -68,7 +68,7 @@
         SetConsoleCursorPosition(hConsole, coord);
     }
     
-    /* 개선된 깜빡임 없는 화면 갱신 */
+    // 계속 깜빡여서 화면 갱신
     void update_game_screen(void) {
         // 커서만 홈으로 이동 (화면을 지우지 않음)
         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -76,7 +76,7 @@
         SetConsoleCursorPosition(hOut, homeCoords);
     }
     
-    /* 화면 버퍼링을 위한 함수 */
+    // 화면 버퍼링을 위한 함수
     void setup_console_buffer(void) {
         HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
         DWORD dwMode = 0;
@@ -100,12 +100,12 @@
     #define SLEEP_MS(ms) usleep((ms) * 1000)
     #define CLEAR_SCREEN() printf("\033[2J\033[H")
     
-    /* Unix/Linux용 함수들 */
+    // Unix,Linux용 함수
     void hide_cursor(void) { printf("\033[?25l"); fflush(stdout); }
     void show_cursor(void) { printf("\033[?25h"); fflush(stdout); }
     void goto_xy(int x, int y) { printf("\033[%d;%dH", y+1, x+1); fflush(stdout); }
     
-    /* macOS/Linux에서 화면 클리어 */
+    // macOS/Linux에서 화면 클리어 -> 이건 윈도우랑은 또 다름 -> 다행히 깜빡임은 없음
     void update_game_screen(void) { 
         printf("\033[H");
         fflush(stdout); 
@@ -347,9 +347,9 @@ int best_point = 0;
 long point = 0;
 int ghost_y = 0;
 
-/* 플랫폼별 키보드 입력 처리 */
+// 플랫폼별 키보드 입력 처리 
 #ifdef _WIN32
-/* Windows용 getch 구현 */
+// Windows용 getch 구현 
 int getch_nonb(void) {
     if (_kbhit()) {
         return _getch();
@@ -358,11 +358,11 @@ int getch_nonb(void) {
 }
 
 void init_keyboard(void) {
-    /* Windows에서는 특별한 초기화 불필요 */
+    // Windows에서는 특별한 초기화 필요없음 
 }
 
 void reset_keyboard(void) {
-    /* Windows에서는 특별한 복구 불필요 */
+    //Windows에서는 복구 필요없음
 }
 
 void flush_input_buffer(void) {
@@ -413,7 +413,7 @@ void Player_name(char* name, int max_len) {
 }
 
 #else
-// Unix/Linux/macOS용 getch 구현
+// Unix, Linux, macOS용 getch 구현
 static struct termios old_tty, new_tty;
 
 void init_keyboard(void) {
@@ -1301,7 +1301,7 @@ int main(void) {
     printf("Platform: Unix\n");
 #endif
     
-    // 플랫폼 정보를 잠깐 보여줌
+    // 플랫폼 정보 표기 Windows, Linux, mac Os
     SLEEP_MS(1000);
     
     // 메인 게임 루프
