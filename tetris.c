@@ -351,7 +351,7 @@ int ghost_y = 0;
 #ifdef _WIN32
 // Windows용 getch 구현 
 int getch_nonb(void) {
-    if (_kbhit()) {
+    if (_keybord()) {
         return _getch();
     }
     return EOF;
@@ -366,7 +366,7 @@ void reset_keyboard(void) {
 }
 
 void flush_input_buffer(void) {
-    while (_kbhit()) {
+    while (_keybord()) {
         _getch();
     }
 }
@@ -378,7 +378,7 @@ void Player_name(char* name, int max_len) {
     int i = 0;
     int ch;
     
-    while (_kbhit()) {
+    while (_keybord()) {
         _getch();
     }
     
@@ -442,7 +442,7 @@ void flush_input_buffer(void) {
     tcflush(STDIN_FILENO, TCIFLUSH);
 }
 
-/* 개선된 이름 입력 함수 - Unix/Linux/macOS */
+// 개선된 이름 입력 함수 - Unix/Linux/macOS
 void Player_name(char* name, int max_len) {
 
      // 키보드를 표준 모드로 완전히 복원
@@ -464,8 +464,6 @@ void Player_name(char* name, int max_len) {
         // 개행 문자 제거
         name[strcspn(name, "\n")] = 0;
     }
-    
-
     
     // 빈 이름 처리 - 재입력 기회 제공
     if (strlen(name) == 0) {
@@ -495,7 +493,7 @@ int check_one_line(void);
 int print_result(void);
 int search_result(void);
 void calculate_ghost_position(void);
-void refresh_with_ghost(int);
+void ghost_rf(int);
 
 /* 고스트 블록 위치 계산 */
 void calculate_ghost_position(void) {
@@ -515,13 +513,13 @@ void calculate_ghost_position(void) {
     y = original_y;
 }
 
-/* 고스트 블록을 포함한 화면 새로고침 */
-void refresh_with_ghost(int block) {
+//고스트 블록을 포함한 화면 새로고침
+void ghost_rf(int block) {
     int i, j;
     int block_array_x, block_array_y;
     char (*block_pointer)[4][4] = NULL;
     
-    /* 먼저 움직이는 블록 지우기 */
+    // 먼저 움직이는 블록 지우기
     for(i = 0; i < 20; i++) {
         for(j = 1; j < 9; j++) {
             if(tetris_table[i][j] == 2 || tetris_table[i][j] == 3) {
@@ -541,7 +539,7 @@ void refresh_with_ghost(int block) {
         default: return;
     }
     
-    /* 고스트 블록 위치 계산 */
+    // 고스트 블록 위치 계산
     calculate_ghost_position();
     
     /* 고스트 블록 그리기 */
@@ -725,7 +723,7 @@ int game_start(void) {
     CLEAR_SCREEN();
     hide_cursor();
     
-    refresh_with_ghost(block_number);
+    ghost_rf(block_number);
     print_tetris_sc();
     
     while(game == GAME_START) {
@@ -767,7 +765,7 @@ int game_start(void) {
             move_block(DOWN);
         }
 
-        refresh_with_ghost(block_number);
+        ghost_rf(block_number);
         print_tetris_sc();
 
         SLEEP_MS(33);  // 프레임 레이트를 30fps로 개선 (33ms)
